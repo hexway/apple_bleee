@@ -47,7 +47,8 @@ if args.check_phone:
 if args.airdrop:
     from opendrop2.cli import AirDropCli, get_devices
 
-base_url = ''  # URL to hash2phone matcher
+hash2phone_url = ''  # URL to hash2phone matcher
+hash2phone_db = "hash2phone/phones.db"
 hlr_key = ''  # hlrlookup.com key here
 hlr_pwd = ''  # hlrlookup.com password here
 hlr_api_url = 'https://www.hlrlookup.com/api/hlr/?apikey={}&password={}&msisdn='.format(hlr_key, hlr_pwd)
@@ -280,8 +281,8 @@ ble_packets_types = {'watch_c': '0b',
                      }
 
 if args.check_hash:
-    if not base_url:
-        print("You have to specify base_url if you want to match hashes to phones")
+    if not (hash2phone_url or hash2phone_db):
+        print("You have to specify hash2phone_url if you want to match hashes to phones")
         exit(1)
 if args.check_hlr:
     if not hlr_key or hlr_pwd:
@@ -615,7 +616,8 @@ def parse_wifi_j(mac, data):
     if mac not in victims:
         victims.append(mac)
         if args.check_hash:
-            get_phone(result['phone_hash'])
+            if hash2phone_url: get_phone_web(result['phone_hash'])
+            else: get_phone_db(result['phone_hash'])
             if args.check_phone:
                 get_names(True)
             if args.check_hlr:
@@ -717,10 +719,23 @@ def read_packet(mac, data_str):
         if ble_packets_types['airdrop'] in packet.keys():
             parse_airdrop_r(mac, packet[ble_packets_types['airdrop']])
 
-
-def get_phone(hash):
+def get_phone_db(hashp):
     global phone_number_info
-    r = requests.get(base_url, proxies=proxies, params={'hash': hash}, verify=verify)
+    conn = sqlite3.connect(hash2phone_db)
+    c = conn.cursor()
+    c.execute('SELECT phone FROM map WHERE hash=?', (hashp,))
+    phones = c.fetchall()
+    if not phones: print("No phone number found for hash '%s'" % hashp)
+    else:
+        phone_number_info = {str(i[0]): {'phone': str(i[0]), 'name': '', 'carrier': '', 'region': '', 'status': '', 'iMessage': ''}
+                             for i in phones}
+    conn.close()
+
+
+
+def get_phone_web(hash):
+    global phone_number_info
+    r = requests.get(hash2phone_url, proxies=proxies, params={'hash': hash}, verify=verify)
     if r.status_code == 200:
         result = r.json()
         phone_number_info = {i: {'phone': '', 'name': '', 'carrier': '', 'region': '', 'status': '', 'iMessage': ''} for
