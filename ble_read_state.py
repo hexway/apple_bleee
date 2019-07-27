@@ -12,6 +12,7 @@ import json
 import curses
 import hashlib
 import urllib3
+import sqlite3
 import requests
 import argparse
 import npyscreen
