@@ -24,7 +24,7 @@ from opendrop2.server import get_devices
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 help_desc = '''
-Apple Airdrop phone number catcher
+Apple AirDrop phone number catcher
 ---chipik
 '''
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -64,7 +64,7 @@ def get_phone(hash):
 
 
 def start_listetninig():
-    print("[*] Looking for an airdrop senders...")
+    print("[*] Looking for AirDrop senders...")
     AirDropCli(["receive"])
 
 
@@ -113,21 +113,21 @@ while 1:
                                 if args.check_phone:
                                     name, carrier, region = get_names(dev["phone"], True)
                                     print(
-                                        "Someone with phone number \033[92m{} ({})\033[0m and ip \033[92m{}\033[0m has tried to use airdrop".format(
+                                        "Someone with phone number \033[92m{} ({})\033[0m and ip \033[92m{}\033[0m has tried to use AirDrop".format(
                                             dev["phone"], name, dev["ip"]))
                                     if args.message:
                                         send_imessage(dev["phone"],
                                                       "Hi, {}! Have you tried to send smth via AirDrop?".format(name))
                                 else:
                                     print(
-                                        "Someone with phone number \033[92m{}\033[0m and ip \033[92m{}\033[0m has tried to use airdrop".format(
+                                        "Someone with phone number \033[92m{}\033[0m and ip \033[92m{}\033[0m has tried to use AirDrop".format(
                                             dev["phone"], dev["ip"]))
                                     if args.message:
                                         send_imessage(dev["phone"],
                                                       "Hi {}! Have you tried to send smth via AirDrop?".format(
                                                           dev["phone"]))
                     else:
-                        print("Someone with phone number hash \033[92m{}\033[0m has tried to use airdrop".format(
+                        print("Someone with phone number hash \033[92m{}\033[0m has tried to use AirDrop".format(
                             dev["hash"]))
 
                 else:
