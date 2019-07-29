@@ -33,7 +33,7 @@ parser.add_argument('-c', '--check_hash', action='store_true', help='Get phone n
 parser.add_argument('-n', '--check_phone', action='store_true', help='Get user info by phone number (TrueCaller/etc)')
 parser.add_argument('-r', '--check_region', action='store_true', help='Get phone number region info')
 parser.add_argument('-l', '--check_hlr', action='store_true',
-                    help='Get phone number info by HRL request (hlrlookup.com)')
+                    help='Get phone number info by HLR request (hlrlookup.com)')
 parser.add_argument('-s', '--ssid', action='store_true', help='Get SSID from requests')
 parser.add_argument('-m', '--message', action='store_true', help='Send iMessage to the victim')
 parser.add_argument('-a', '--airdrop', action='store_true', help='Get info from AWDL')
@@ -556,7 +556,7 @@ def parse_nandoff(mac, data):
     # +--------+----------------+----------------------------+
     handoff = {'clipboard': 1, 's_nbr': 2, 'data': 999}
     result = parse_struct(data, handoff)
-    # print("Handof:{}".format(data))
+    # print("Handoff:{}".format(data))
     # print(result)
 
 
@@ -658,7 +658,7 @@ def parse_airpods(mac, data):
     # +------------------------+--------+-------+--------+-------+-----------------+------------------------------------------------------------+
     airpods = {'some': 3, 'state1': 1, 'state2': 1, 'data1': 1, 'data2': 1, 'data3': 2, 'data4': 16}
     result = parse_struct(data, airpods)
-    # print("Airpods:{}".format(data))
+    # print("AirPods:{}".format(data))
     # print(result)
     state = unkn = '<unknown>'
     if result['state1'] in airpods_states.keys():
@@ -685,7 +685,7 @@ def parse_airdrop_r(mac, data):
     # +-----------------------------------------+--------+----------------+---------------------+-------------------+------------------+--------+
     airdrop_r = {'zeros': 8, 'st': 1, 'appleID_hash': 2, 'phone_hash': 2, 'email_hash': 2, 'email2_hash': 2, 'zero': 1}
     result = parse_struct(data, airdrop_r)
-    # print("Airdrop:{}".format(data))
+    # print("AirDrop:{}".format(data))
     # print(result)
 
 
