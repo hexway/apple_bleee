@@ -6,15 +6,16 @@
 
 #yeah, this is just PoC
 
+from __future__ import print_function
 import sys
 import hashlib
 import psycopg2
 
 if len(sys.argv)!=2:
-	print "\nUsage:\t",sys.argv[0],"<4-digit phone prefix>"
-	print "\nEx.:Calculate hashmap for range +12130000000 -- +12139999999:"
-        print sys.argv[0],"1213"
-	print "\n\n";
+	print("\nUsage:\t",sys.argv[0],"<4-digit phone prefix>")
+	print("\nEx.:Calculate hashmap for range +12130000000 -- +12139999999:")
+  print(sys.argv[0],"1213")
+	print("\n\n");
 	sys.exit()
 
 
@@ -35,7 +36,7 @@ postgres_insert_query = """ INSERT INTO map (hash, phone) VALUES (%s, %s)"""
 while num < stop_num :
 
     if num % 100000 is 0:
-        print 100-(stop_num-num)/100000,"% complete"
+        print(100-(stop_num-num)/100000,"% complete")
         connection.commit()
     strnum = str(num)
     m = hashlib.sha256()
@@ -49,6 +50,6 @@ while num < stop_num :
 
     num +=1
 connection.commit()
-print "last num:\t", strnum
-print "done!"
+print("last num:\t", strnum)
+print("done!")
 
