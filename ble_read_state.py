@@ -17,6 +17,7 @@ import requests
 import argparse
 import npyscreen
 import subprocess
+from os import path
 from bs4 import BeautifulSoup
 from prettytable import PrettyTable
 from threading import Thread, Timer
@@ -282,8 +283,8 @@ ble_packets_types = {'watch_c': '0b',
                      }
 
 if args.check_hash:
-    if not (hash2phone_url or hash2phone_db):
-        print("You have to specify hash2phone_url if you want to match hashes to phones")
+    if not (hash2phone_url or path.isfile(hash2phone_db)):
+        print("You have to specify hash2phone_url or create phones.db if you want to match hashes to phones. See howto here: https://github.com/hexway/apple_bleee/tree/master/hash2phone")
         exit(1)
 if args.check_hlr:
     if not hlr_key or hlr_pwd:

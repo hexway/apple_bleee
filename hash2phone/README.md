@@ -31,7 +31,7 @@ cp map_hash_num.php /var/www/html/
 - SQLite
 
 ```
-hashmap_gen_sqlite.py dbinit
+python3 hashmap_gen_sqlite.py dbinit
 ```
 
 Fill database with hashes for phone numbers range with your favorite preffix (e.g. +12130000000 -> +12139999999)
@@ -39,7 +39,13 @@ Fill database with hashes for phone numbers range with your favorite preffix (e.
 - Postgresql
 
 ```
-python ./hashmap_gen.py 1213
+python3 hashmap_gen.py 1213
+```
+
+- SQLite
+
+```
+python3 hashmap_gen_sqlite.py 1213XXXXXX
 ```
 
 ## Usage
@@ -52,11 +58,5 @@ http://127.0.0.1/map_hash_num.php?hash=112233
 
 ![ph_candidates](img/hash_api.png)
 
-- SQLite
-
-```
-hashmap_gen_sqlite.py 1213XXXXXX
-hashmap_gen_sqlite.py 1213 XXX-XXX
-```
 
 will store the hashes for those numbers in a file named phones.db
