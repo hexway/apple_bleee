@@ -13,7 +13,7 @@ import bluetooth._bluetooth as bluez
 from utils.bluetooth_utils import (toggle_device, start_le_advertising, stop_le_advertising)
 
 help_desc = '''
-Wifi pwd sharing spoofing PoC
+WiFi password sharing spoofing PoC
 ---chipik
 '''
 
@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(description=help_desc, formatter_class=argparse
 parser.add_argument('-p', '--phone', default='none', help='Phone number (example: 39217XXX514)')
 parser.add_argument('-e', '--email', default='none', help='Email address (example: test@test.com)')
 parser.add_argument('-a', '--appleid', default='none', help='Email address (example: test@icloud.com)')
-parser.add_argument('-s', '--ssid', required=True, help='Wi-Fi SSID (example: test)')
+parser.add_argument('-s', '--ssid', required=True, help='WiFi SSID (example: test)')
 parser.add_argument('-i', '--interval', default=200, type=int, help='Advertising interval')
 args = parser.parse_args()
 

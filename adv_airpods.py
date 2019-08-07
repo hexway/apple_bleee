@@ -19,7 +19,7 @@ AirPods advertise spoofing PoC
 
 parser = argparse.ArgumentParser(description=help_desc, formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-i', '--interval', default=200, type=int, help='Advertising interval')
-parser.add_argument('-r', '--random', action='store_true', help='send random charge values')
+parser.add_argument('-r', '--random', action='store_true', help='Send random charge values')
 args = parser.parse_args()
 
 dev_id = 0  # the bluetooth device is hci0

@@ -12,15 +12,15 @@ import hashlib
 import psycopg2
 
 if len(sys.argv)!=2:
-	print("\nUsage:\t",sys.argv[0],"<4-digit phone preffix>")
+	print("\nUsage:\t",sys.argv[0],"<4-digit phone prefix>")
 	print("\nEx.:Calculate hashmap for range +12130000000 -- +12139999999:")
-        print(sys.argv[0],"1213")
+  print(sys.argv[0],"1213")
 	print("\n\n");
 	sys.exit()
 
 
-preffix = sys.argv[1]
-num=int(preffix+"0000000")
+prefix = sys.argv[1]
+num=int(prefix+"0000000")
 stop_num=num+10000000
 
 connection = psycopg2.connect(user="lookup",
