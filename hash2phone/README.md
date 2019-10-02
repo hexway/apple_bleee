@@ -10,7 +10,7 @@ Install dependencies
 
 ```
 sudo apt update
-sudo apt install postgresql apache2 apache2-utils php php-pgsql libapache2-mod-php libpq5 postgresql postgresql-client postgresql-client-common postgresql-contrib python python-pip python-pip postgresql-server-dev-all
+sudo apt install apache2 apache2-utils php php-pgsql libapache2-mod-php libpq5 postgresql postgresql-client postgresql-client-common postgresql-contrib python python-pip python-pip postgresql-server-dev-all
 sudo pip install psycopg2
 ```
 

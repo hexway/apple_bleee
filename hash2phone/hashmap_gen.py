@@ -35,7 +35,7 @@ postgres_insert_query = """ INSERT INTO map (hash, phone) VALUES (%s, %s)"""
 
 while num < stop_num :
 
-    if num % 100000 is 0:
+    if num % 100000 == 0:
         print(100-(stop_num-num)/100000,"% complete")
         connection.commit()
     strnum = str(num)

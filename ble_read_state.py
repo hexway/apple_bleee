@@ -39,6 +39,7 @@ parser.add_argument('-l', '--check_hlr', action='store_true',
 parser.add_argument('-s', '--ssid', action='store_true', help='Get SSID from requests')
 parser.add_argument('-m', '--message', action='store_true', help='Send iMessage to the victim')
 parser.add_argument('-a', '--airdrop', action='store_true', help='Get info from AWDL')
+parser.add_argument('-v', '--verb', action='store_true', help='Verbose output')
 parser.add_argument('-t', '--ttl', type=int, default=15, help='ttl')
 args = parser.parse_args()
 
@@ -78,22 +79,28 @@ proxies = {}
 verify = False
 
 # not sure about 1b, 13, 0a, 1a, 17
-phone_states = {'0b': 'Home screen',
-                '1c': 'Home screen',
-                '1b': 'Home screen',
-                '11': 'Home screen',
-                '03': 'Off',
-                '18': 'Off',
-                '09': 'Off',
-                '13': 'Off',
-                '0a': 'Off',
-                '1a': 'Off',
-                '01': 'Off',
-                '07': 'Lock screen',
-                '17': 'Lock screen',
-                '0e': 'Calling',
-                '5b': 'Home screen',
-                '5a': 'Off',
+phone_states = {
+                '01':'Off',
+                '03':'Off',
+                '07':'Lock screen',
+                '09':'Off',
+                '0a':'Off',
+                '0b':'Home screen',
+                '0e':'Calling',
+                '11':'Home screen',
+                '13':'Off',
+                '17':'Lock screen',
+                '18':'Off',
+                '1a':'Off',
+                '1b':'Home screen',
+                '1c':'Home screen',
+                '47':'Lock screen',
+                '4b':'Home screen',
+                '4e':'Outgoing call',
+                '57':'Lock screen',
+                '5a':'Off',
+                '5b':'Home screen',
+                '5e':'Incoming call',
                 }
 
 airpods_states = {
@@ -310,9 +317,9 @@ class MyGrid(npyscreen.GridColTitles):
         if 'Off' in cell_display_value or '<error>' in cell_display_value or 'iOS10' in cell_display_value or 'iOS11' in cell_display_value:
             actual_cell.color = 'DANGER'
         elif 'Home screen' in cell_display_value or 'On' in cell_display_value or cell_display_value[0:3] in '\n'.join(
-                dev_types) or 'iOS12' in cell_display_value or 'X' in cell_display_value or 'Calling' in cell_display_value or cell_display_value in airpods_states.values() or 'WatchOS' in cell_display_value or 'Watch' in cell_display_value or 'iOS13' in cell_display_value or 'Connecting' in cell_display_value or 'WiFi screen' in cell_display_value:
+                dev_types) or 'X' in cell_display_value or 'Calling' in cell_display_value or cell_display_value in airpods_states.values() or 'WatchOS' in cell_display_value or 'Watch' in cell_display_value or 'iOS13' in cell_display_value or 'Connecting' in cell_display_value or 'WiFi screen' in cell_display_value or 'Incoming' in cell_display_value or 'Outgoing' in cell_display_value:
             actual_cell.color = 'GOOD'
-        elif 'Lock screen' in cell_display_value:
+        elif 'Lock screen' in cell_display_value or 'iOS12' in cell_display_value :
             actual_cell.color = 'CONTROL'
         else:
             actual_cell.color = 'DEFAULT'
@@ -477,6 +484,8 @@ def parse_os_wifi_code(code, dev):
         return ('iOS13', 'Connecting')
     if code == '0c':
         return ('iOS12', 'On')
+    if code == '04':
+        return ('iOS13', 'On')
     if code == '00':
         return ('iOS10', '<unknown>')
     if code == '09':
@@ -529,13 +538,19 @@ def parse_nearby(mac, header, data):
     result = parse_struct(data, nearby)
     # print("Nearby:{}".format(data))
     state = os_state = wifi_state = unkn = '<unknown>'
+    if args.verb:
+        state = os_state = wifi_state = unkn = '<unknown>({})'.format(result['status'])
     if result['status'] in phone_states.keys():
         state = phone_states[result['status']]
+        if args.verb:
+            state = '{}({})'.format(phone_states[result['status']], result['status'])
     dev_val = unkn
     for dev in dev_sig:
         if dev in header:
             dev_val = dev_sig[dev]
     os_state, wifi_state = parse_os_wifi_code(result['wifi'], dev_val)
+    if args.verb:
+        wifi_state = '{}({})'.format(wifi_state, result['wifi'])
     if os_state == 'WatchOS':
         dev_val = 'Watch'
     if mac in resolved_macs or mac in resolved_devs:
@@ -543,7 +558,8 @@ def parse_nearby(mac, header, data):
         phones[mac]['wifi'] = wifi_state
         phones[mac]['os'] = os_state
         phones[mac]['time'] = int(time.time())
-        phones[mac]['device'] = dev_val
+        if mac not in resolved_devs:
+            phones[mac]['device'] = dev_val
     else:
         phones[mac] = {'state': unkn, 'device': unkn, 'wifi': unkn, 'os': unkn, 'phone': '', 'time': int(time.time())}
         phones[mac]['device'] = dev_val
@@ -694,10 +710,10 @@ def parse_airdrop_r(mac, data):
 
 
 def read_packet(mac, data_str):
-    state = '<unknown>'
-    os_state = '<unknown>'
-    wifi_state = '<unknown>'
-    unkn = '<unknown>'
+    # state = '<unknown>'
+    # os_state = '<unknown>'
+    # wifi_state = '<unknown>'
+    # unkn = '<unknown>'
 
     if apple_company_id in data_str:
         header = data_str[:data_str.find(apple_company_id)]
