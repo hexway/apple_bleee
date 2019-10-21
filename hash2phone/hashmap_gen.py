@@ -14,7 +14,7 @@ import psycopg2
 if len(sys.argv)!=2:
 	print("\nUsage:\t",sys.argv[0],"<4-digit phone prefix>")
 	print("\nEx.:Calculate hashmap for range +12130000000 -- +12139999999:")
-  print(sys.argv[0],"1213")
+  	print(sys.argv[0],"1213")
 	print("\n\n");
 	sys.exit()
 
