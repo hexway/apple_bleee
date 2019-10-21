@@ -14,7 +14,7 @@ import psycopg2
 if len(sys.argv)!=2:
 	print("\nUsage:\t",sys.argv[0],"<4-digit phone prefix>")
 	print("\nEx.:Calculate hashmap for range +12130000000 -- +12139999999:")
-  print(sys.argv[0],"1213")
+	print(sys.argv[0],"1213")
 	print("\n\n");
 	sys.exit()
 
@@ -38,12 +38,15 @@ while num < stop_num :
     if num % 100000 == 0:
         print(100-(stop_num-num)/100000,"% complete")
         connection.commit()
-    strnum = str(num)
+    strnum = str(num).encode('utf-8')
     m = hashlib.sha256()
     m.update(strnum)
-    hash= m.digest().encode("hex")[0:6]
-
-    record_to_insert = ("\\x"+hash, strnum)
+    bhash = m.digest()
+    strhash = str(bhash).encode()
+    print(strhash)
+    print(strnum)
+    record_to_insert = (strhash, num)
+    print(record_to_insert)
     cursor.execute(postgres_insert_query, record_to_insert)
 
 
@@ -52,4 +55,3 @@ while num < stop_num :
 connection.commit()
 print("last num:\t", strnum)
 print("done!")
-
