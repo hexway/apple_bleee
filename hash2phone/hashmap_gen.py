@@ -43,10 +43,10 @@ while num < stop_num :
     m.update(strnum)
     bhash = m.digest()
     strhash = str(bhash).encode()
-    print(strhash)
-    print(strnum)
+    #print(strhash)  #These are optional if you want to see it work
+    #print(strnum)
     record_to_insert = (strhash, num)
-    print(record_to_insert)
+    #print(record_to_insert)
     cursor.execute(postgres_insert_query, record_to_insert)
 
 
