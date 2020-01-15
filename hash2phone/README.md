@@ -25,7 +25,8 @@ sudo -u postgres psql < db_init.sql
 Place lookup script into webserver directory:
 
 ```
-cp map_hash_num.php /var/www/html/
+cp map_hash_num.php /var/www/html/ # postgres version
+cp map_hash_num_sqlite.php /var/www/html/ # sqlite version
 ```
 
 - SQLite
@@ -54,6 +55,7 @@ Now you can get mobile phones by 3 bytes of SHA256(phone_number) this way:
 
 ```
 http://127.0.0.1/map_hash_num.php?hash=112233
+http://127.0.0.1/map_hash_num_sqlite.php?hash=112233
 ```
 
 ![ph_candidates](img/hash_api.png)
