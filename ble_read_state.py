@@ -4,7 +4,7 @@
 
 # web: https://hexway.io
 # Twitter: https://twitter.com/_hexway
-
+import random
 import re
 import sys
 import time
@@ -39,7 +39,8 @@ parser.add_argument('-l', '--check_hlr', action='store_true',
 parser.add_argument('-s', '--ssid', action='store_true', help='Get SSID from requests')
 parser.add_argument('-m', '--message', action='store_true', help='Send iMessage to the victim')
 parser.add_argument('-a', '--airdrop', action='store_true', help='Get info from AWDL')
-parser.add_argument('-v', '--verb', action='store_true', help='Verbose output')
+parser.add_argument('-d', '--active', action='store_true', help='Get devices names (gatttool)')
+parser.add_argument('-v', '--verb', help='Verbose output. Filter actions (All, Nearby, Handoff, etc)')
 parser.add_argument('-t', '--ttl', type=int, default=15, help='ttl')
 args = parser.parse_args()
 
@@ -64,14 +65,15 @@ dev_id = 0  # the bluetooth device is hci0
 toggle_device(dev_id, True)
 
 sock = 0
-titles = ['Mac', 'State', 'Device', 'WI-FI', 'OS', 'Phone', 'Time']
+titles = ['Mac', 'State', 'Device', 'WI-FI', 'OS', 'Phone', 'Time', 'Notes']
 dev_sig = {'02010': 'MacBook', '02011': 'iPhone'}
-dev_types = ["iPad", "iPhone", "MacOS", "AirPods"]
+dev_types = ["iPad", "iPhone", "MacOS", "AirPods", "Powerbeats3", "BeatsX", "Beats Solo3"]
 phones = {}
 resolved_devs = []
 resolved_macs = []
 resolved_numbers = []
 victims = []
+verb_messages = []
 phone_number_info = {}
 hash2phone = {}
 dictOfss = {}
@@ -79,36 +81,65 @@ proxies = {}
 verify = False
 
 # not sure about 1b, 13, 0a, 1a, 17
+# phone_states2 = {
+#                 '01':'Off',
+#                 '03':'Off',
+#                 '07':'Lock screen',
+#                 '09':'Off',
+#                 '0a':'Off',
+#                 '0b':'Home screen',
+#                 '0e':'Calling',
+#                 '11':'Home screen',
+#                 '13':'Off',
+#                 '17':'Lock screen',
+#                 '18':'Off',
+#                 '1a':'Off',
+#                 '1b':'Home screen',
+#                 '1c':'Home screen',
+#                 '47':'Lock screen',
+#                 '4b':'Home screen',
+#                 '4e':'Outgoing call',
+#                 '57':'Lock screen',
+#                 '5a':'Off',
+#                 '5b':'Home screen',
+#                 '5e':'Incoming call',
+#                 }
 phone_states = {
-                '01':'Off',
-                '03':'Off',
-                '07':'Lock screen',
-                '09':'Off',
-                '0a':'Off',
-                '0b':'Home screen',
-                '0e':'Calling',
-                '11':'Home screen',
-                '13':'Off',
-                '17':'Lock screen',
-                '18':'Off',
-                '1a':'Off',
-                '1b':'Home screen',
-                '1c':'Home screen',
-                '47':'Lock screen',
-                '4b':'Home screen',
-                '4e':'Outgoing call',
-                '57':'Lock screen',
-                '5a':'Off',
-                '5b':'Home screen',
-                '5e':'Incoming call',
-                }
+    '01': 'Disabled',
+    '03': 'Idle',
+    '05': 'Music',
+    '07': 'Lock screen',
+    '09': 'Video',
+    '0a': 'Home screen',
+    '0b': 'Home screen',
+    '0d': 'Driving',
+    '0e': 'Incoming call',
+    '11': 'Home screen',
+    '13': 'Off',
+    '17': 'Lock screen',
+    '18': 'Off',
+    '1a': 'Off',
+    '1b': 'Home screen',
+    '1c': 'Home screen',
+    '23': 'Off',
+    '47': 'Lock screen',
+    '4b': 'Home screen',
+    '4e': 'Outgoing call',
+    '57': 'Lock screen',
+    '5a': 'Off',
+    '5b': 'Home screen',
+    '5e': 'Outgoing call',
+    '67': 'Lock screen',
+    '6b': 'Home screen',
+    '6e': 'Incoming call',
+}
 
 airpods_states = {
     '00': 'Case:Closed',
     '01': 'Case:All out',
     '02': 'L:out',
-    '05': 'R:out',
     '03': 'L:out',
+    '05': 'R:out',
     '09': 'R:out',
     '0b': 'LR:in',
     '11': 'R:out',
@@ -279,19 +310,99 @@ devices_models = {
     "Watch4,4": "Apple Watch Series 4 44mm case (GPS+Cellular)",
 }
 
-ble_packets_types = {'watch_c': '0b',
-                     'handoff': '0c',
-                     'wifi_set': '0d',
-                     'hotspot': '0e',
-                     'wifi_join': '0f',
-                     'nearby': '10',
-                     'airpods': '07',
-                     'airdrop': '05',
-                     }
+proximity_dev_models = {
+    '0220': 'AirPods',
+    '0320': 'Powerbeats3',
+    '0520': 'BeatsX',
+    '0620': 'Beats Solo3'
+}
+
+proximity_colors = {
+    '00': 'White',
+    '01': 'Black',
+    '02': 'Red',
+    '03': 'Blue',
+    '04': 'Pink',
+    '05': 'Gray',
+    '06': 'Silver',
+    '07': 'Gold',
+    '08': 'Rose Gold',
+    '09': 'Space Gray',
+    '0a': 'Dark Blue',
+    '0b': 'Light Blue',
+    '0c': 'Yellow',
+}
+
+homekit_category = {
+    '0000': 'Unknown',
+    '0100': 'Other',
+    '0200': 'Bridge',
+    '0300': 'Fan',
+    '0400': 'Garage Door Opener',
+    '0500': 'Lightbulb',
+    '0600': 'Door Lock',
+    '0700': 'Outlet',
+    '0800': 'Switch',
+    '0900': 'Thermostat',
+    '0a00': 'Sensor',
+    '0b00': 'Security System',
+    '0c00': 'Door',
+    '0d00': 'Window',
+    '0e00': 'Window Covering',
+    '0f00': 'Programmable Switch',
+    '1000': 'Range Extender',
+    '1100': 'IP Camera',
+    '1200': 'Video Doorbell',
+    '1300': 'Air Purifier',
+    '1400': 'Heater',
+    '1500': 'Air Conditioner',
+    '1600': 'Humidifier',
+    '1700': 'Dehumidifier',
+    '1c00': 'Sprinklers',
+    '1d00': 'Faucets',
+    '1e00': 'Shower Systems',
+}
+
+siri_dev = {'0002': 'iPhone',
+            '0003': 'iPad',
+            '0009': 'MacBook',
+            '000a': 'Watch',
+            }
+
+magic_sw_wrist = {
+    '03': 'Not on wrist',
+    '1f': 'Wrist detection disabled',
+    '3f': 'On wrist',
+}
+
+hotspot_net = {
+    '01': '1xRTT',
+    '02': 'GPRS',
+    '03': 'EDGE',
+    '04': '3G (EV-DO)',
+    '05': '3G',
+    '06': '4G',
+    '07': 'LTE',
+}
+ble_packets_types = {
+    'airprint': '03',
+    'airdrop': '05',
+    'homekit': '06',
+    'airpods': '07',
+    'siri': '08',
+    'airplay': '09',
+    'nearby': '10',
+    'watch_c': '0b',
+    'handoff': '0c',
+    'wifi_set': '0d',
+    'hotspot': '0e',
+    'wifi_join': '0f',
+}
 
 if args.check_hash:
     if not (hash2phone_url or path.isfile(hash2phone_db)):
-        print("You have to specify hash2phone_url or create phones.db if you want to match hashes to phones. See howto here: https://github.com/hexway/apple_bleee/tree/master/hash2phone")
+        print(
+            "You have to specify hash2phone_url or create phones.db if you want to match hashes to phones. See howto here: https://github.com/hexway/apple_bleee/tree/master/hash2phone")
         exit(1)
 if args.check_hlr:
     if not hlr_key or hlr_pwd:
@@ -303,7 +414,7 @@ if args.check_region:
         exit(1)
 if args.message:
     if not imessage_url:
-        print("You have to specify imessage_url if you want to send iMessages to the victim")
+        print("You have to specify iMessage_url if you want to send iMessages to the victim")
         exit(1)
 
 
@@ -314,18 +425,22 @@ class App(npyscreen.StandardApp):
 
 class MyGrid(npyscreen.GridColTitles):
     def custom_print_cell(self, actual_cell, cell_display_value):
-        if 'Off' in cell_display_value or '<error>' in cell_display_value or 'iOS10' in cell_display_value or 'iOS11' in cell_display_value:
+        if 'Off' in cell_display_value or '<error>' in cell_display_value or 'iOS10' in cell_display_value or 'iOS11' in cell_display_value or 'Disabled' in cell_display_value:
             actual_cell.color = 'DANGER'
         elif 'Home screen' in cell_display_value or 'On' in cell_display_value or cell_display_value[0:3] in '\n'.join(
-                dev_types) or 'X' in cell_display_value or 'Calling' in cell_display_value or cell_display_value in airpods_states.values() or 'WatchOS' in cell_display_value or 'Watch' in cell_display_value or 'iOS13' in cell_display_value or 'Connecting' in cell_display_value or 'WiFi screen' in cell_display_value or 'Incoming' in cell_display_value or 'Outgoing' in cell_display_value:
+                dev_types) or 'X' in cell_display_value or 'Calling' in cell_display_value or cell_display_value in airpods_states.values() or 'WatchOS' in cell_display_value or 'Watch' in cell_display_value or 'iOS13' in cell_display_value or 'Connecting' in cell_display_value or 'WiFi screen' in cell_display_value or 'Incoming' in cell_display_value or 'Outgoing' in cell_display_value or 'Siri' in cell_display_value or 'Idle' in cell_display_value:
             actual_cell.color = 'GOOD'
-        elif 'Lock screen' in cell_display_value or 'iOS12' in cell_display_value :
+        elif 'Lock screen' in cell_display_value or 'iOS12' in cell_display_value:
             actual_cell.color = 'CONTROL'
         else:
             actual_cell.color = 'DEFAULT'
 
 
 class OutputBox(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.MultiLineEdit
+
+
+class VerbOutputBox(npyscreen.BoxTitle):
     _contained_widget = npyscreen.MultiLineEdit
 
 
@@ -339,6 +454,9 @@ class MainForm(npyscreen.FormBaseNew):
         if args.airdrop:
             self.gd = self.add(MyGrid, col_titles=titles, column_width=20, max_height=y // 2)
             self.OutputBox = self.add(OutputBox, editable=False)
+        elif args.verb:
+            self.gd = self.add(MyGrid, col_titles=titles, column_width=20, max_height=y // 2)
+            self.VerbOutputBox = self.add(VerbOutputBox, editable=False, name=logFile)
         else:
             self.gd = self.add(MyGrid, col_titles=titles, column_width=20)
         self.gd.values = []
@@ -349,6 +467,11 @@ class MainForm(npyscreen.FormBaseNew):
         if args.airdrop:
             self.OutputBox.value = print_wifi_devs()
             self.OutputBox.display()
+        if args.verb:
+            self.VerbOutputBox.value = pop_verb_messages()
+            self.VerbOutputBox.display()
+        if args.active:
+            self.get_all_dev_names()
 
     def exit_func(self, _input):
         disable_le_scan(sock)
@@ -357,6 +480,7 @@ class MainForm(npyscreen.FormBaseNew):
 
     def get_dev_name(self, mac_addr):
         global resolved_devs
+        # self.get_all_dev_names()
         dev_name = ''
         kill = lambda process: process.kill()
         cmd = ['gatttool', '-t', 'random', '--char-read', '--uuid=0x2a24', '-b', mac_addr]
@@ -372,11 +496,21 @@ class MainForm(npyscreen.FormBaseNew):
             d_n_str = bytes.fromhex(d_n_hex.decode("utf-8")).decode('utf-8')
             return_value = devices_models[d_n_str]
         else:
-            return_value = "<error>"
+            return_value = ''
         init_bluez()
+        resolved_devs.append(mac_addr)
         if return_value:
-            resolved_devs.append(mac_addr)
+            # resolved_devs.append(mac_addr)
             self.set_device_val_for_mac(mac_addr, return_value)
+
+    def get_all_dev_names(self):
+        global resolved_devs
+        for phone in phones:
+            # print (phones[phone])
+            if (phones[phone]['device'] == 'MacBook' or phones[phone][
+                'device'] == 'iPhone') and phone not in resolved_devs:
+                # print(f"checking {phone}")
+                self.get_dev_name(phone)
 
     def get_mac_val_from_cell(self):
         return self.gd.values[self.gd.edit_cell[0]][0]
@@ -424,6 +558,7 @@ class MainForm(npyscreen.FormBaseNew):
         if cell == 'Device':
             mac = self.get_mac_val_from_cell()
             thread2 = Thread(target=self.get_dev_name, args=(mac,))
+            # thread2 = Thread(target=self.get_all_dev_names())
             thread2.daemon = True
             thread2.start()
         if cell == 'Phone':
@@ -459,8 +594,20 @@ def print_results():
     row = []
     for phone in phones:
         row.append([phone, phones[phone]['state'], phones[phone]['device'], phones[phone]['wifi'], phones[phone]['os'],
-                    phones[phone]['phone'], phones[phone]['time']])
+                    phones[phone]['phone'], phones[phone]['time'], phones[phone]['notes']])
     return row
+
+
+def parse_struct(data, struct):
+    result = {}
+    i = 0
+    for key in struct:
+        if key == 999:
+            result[key] = data[i:]
+        else:
+            result[key] = data[i:i + struct[key] * 2]
+        i = i + struct[key] * 2
+    return result
 
 
 def parse_os_wifi_code(code, dev):
@@ -469,33 +616,33 @@ def parse_os_wifi_code(code, dev):
             return ('Mac OS', 'On')
         else:
             return ('iOS12', 'On')
-    if code == '18':
+    elif code == '18':
         if dev == 'MacBook':
             return ('Mac OS', 'Off')
         else:
             return ('iOS12', 'Off')
-    if code == '10':
+    elif code == '10':
         return ('iOS11', '<unknown>')
-    if code == '1e':
+    elif code == '1e':
         return ('iOS13', 'On')
-    if code == '1a':
+    elif code == '1a':
         return ('iOS13', 'Off')
-    if code == '0e':
+    elif code == '0e':
         return ('iOS13', 'Connecting')
-    if code == '0c':
+    elif code == '0c':
         return ('iOS12', 'On')
-    if code == '04':
+    elif code == '04':
         return ('iOS13', 'On')
-    if code == '00':
+    elif code == '00':
         return ('iOS10', '<unknown>')
-    if code == '09':
+    elif code == '09':
         return ('Mac OS', '<unknown>')
-    if code == '14':
+    elif code == '14':
         return ('Mac OS', 'On')
-    if code == '98':
+    elif code == '98':
         return ('WatchOS', '<unknown>')
     else:
-        return ('<error({})>'.format(code), '<error({})>'.format(code))
+        return ('', '')
 
 
 def parse_ble_packet(data):
@@ -512,31 +659,28 @@ def parse_ble_packet(data):
     return parsed_data
 
 
-def parse_struct(data, struct):
-    result = {}
-    i = 0
-    # if len(data)!=sum(struct.values())*2:
-    #     print("wrong lenght")
-    #     return {}
-    for key in struct:
-        if key == 999:
-            result[key] = data[i:]
-        else:
-            result[key] = data[i:i + struct[key] * 2]
-        i = i + struct[key] * 2
-    return result
+def put_verb_message(msg, mac):
+    if args.verb:
+        action = msg[:msg.find(":")]
+        if action.lower() in args.verb.lower().split(",") or "all" in args.verb.lower():
+            f = open(logFile, 'a+')
+            f.write(f"{mac} {msg}\n")
+            f.close()
+            verb_messages.append(f"{mac} {msg}")
 
 
 def parse_nearby(mac, header, data):
     # 0        1        2                                 5
     # +--------+--------+--------------------------------+
     # |        |        |                                |
-    # | status | wifi   |           other                |
+    # | status | wifi   |           authTag              |
     # |        |        |                                |
     # +--------+--------+--------------------------------+
-    nearby = {'status': 1, 'wifi': 1, 'other': 999}
+    nearby = {'status': 1,
+              'wifi': 1,
+              'authTag': 999}
     result = parse_struct(data, nearby)
-    # print("Nearby:{}".format(data))
+    put_verb_message("Nearby:{}".format(json.dumps(result)), mac)
     state = os_state = wifi_state = unkn = '<unknown>'
     if args.verb:
         state = os_state = wifi_state = unkn = '<unknown>({})'.format(result['status'])
@@ -561,26 +705,56 @@ def parse_nearby(mac, header, data):
         if mac not in resolved_devs:
             phones[mac]['device'] = dev_val
     else:
-        phones[mac] = {'state': unkn, 'device': unkn, 'wifi': unkn, 'os': unkn, 'phone': '', 'time': int(time.time())}
+        phones[mac] = {'state': unkn, 'device': unkn, 'wifi': unkn, 'os': unkn, 'phone': '', 'time': int(time.time()),
+                       'notes': ''}
         phones[mac]['device'] = dev_val
         resolved_macs.append(mac)
 
 
 def parse_nandoff(mac, data):
-    # 0        1                3
-    # +--------+----------------+----------------------------+
-    # |        |                |
-    # |clipbrd | seq.nmbr       |     encr.data
-    # |        |                |
-    # +--------+----------------+----------------------------+
-    handoff = {'clipboard': 1, 's_nbr': 2, 'data': 999}
+    # 0       1          3       4                                   14
+    # +-------+----------+-------+-----------------------------------+
+    # |       |          |       |                                   |
+    # | Clbrd | seq.nmbr | Auth  |     Encrypted payload             |
+    # |       |          |       |                                   |
+    # +-------+----------+-------+-----------------------------------+
+    handoff = {'clipboard': 1,
+               's_nbr': 2,
+               'authTag': 1,
+               'encryptedData': 10}
     result = parse_struct(data, handoff)
-    # print("Handoff:{}".format(data))
-    # print(result)
+    put_verb_message("Handoff:{}".format(json.dumps(result)), mac)
+    notes = f"Clbrd:True" if result['clipboard'] == '08' else ''
+    if mac in resolved_macs:
+        phones[mac]['time'] = int(time.time())
+        phones[mac]['notes'] = notes
+    else:
+        phones[mac] = {'state': 'Idle', 'device': 'AppleWatch', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': notes}
+        resolved_macs.append(mac)
 
 
 def parse_watch_c(mac, data):
-    print("Watch_connection:{}".format(data))
+    # 0          2       3
+    # +----------+-------+
+    # |          |       |
+    # |  Data    | Wrist |
+    # |          |       |
+    # +----------+-------+
+    magic_switch = {'data': 2,
+                    'wrist': 1
+                    }
+    result = parse_struct(data, magic_switch)
+    put_verb_message("MagicSwitch:{}".format(json.dumps(result)), mac)
+    notes = f"{magic_sw_wrist[result['wrist']]}"
+    if mac in resolved_macs:
+        phones[mac]['state'] = 'MagicSwitch'
+        phones[mac]['time'] = int(time.time())
+        phones[mac]['notes'] = notes
+    else:
+        phones[mac] = {'state': 'MagicSwitch', 'device': 'AppleWatch', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': notes}
+        resolved_macs.append(mac)
 
 
 def parse_wifi_set(mac, data):
@@ -592,8 +766,7 @@ def parse_wifi_set(mac, data):
     # +-----------------------------------------+
     wifi_set = {'icloudID': 4}
     result = parse_struct(data, wifi_set)
-    # print("WiFi settings:{}".format(data))
-    # print(result)
+    put_verb_message("WiFi settings:{}".format(json.dumps(result)), mac)
     unkn = '<unknown>'
     if mac in resolved_macs or mac in resolved_devs:
         phones[mac]['state'] = 'WiFi screen'
@@ -603,17 +776,29 @@ def parse_wifi_set(mac, data):
 
 
 def parse_hotspot(mac, data):
-    # 0                2           3            4           5            6
-    # +----------------+-----------+------------+-----------+------------+
-    # |                |           |            |           |            |
-    # |   data1        | battery   |  data2     |cell serv  | cell bars  |
-    # |                |           |            |           |            |
-    # +----------------+-----------+------------+-----------+------------+
-    hotspot = {'data1': 2, 'battery': 1, 'data2': 1, 'cell_srv': 1, 'cell_bars': 1}
+    # 0       1       2           4       5       6
+    # +-------+-------+-----------+-------+-------+
+    # |       |       |           | Net   |  Sig  |
+    # | Ver   | Flags | Bat. lvl  | type  |  str  |
+    # |       |       |           |       |       |
+    # +-------+-------+-----------+-------+--------
+
+    hotspot = {'version': 1,
+               'flags': 1,
+               'battery': 2,
+               'cell_srv': 1,
+               'cell_bars': 1
+               }
     result = parse_struct(data, hotspot)
+    put_verb_message("Hotspot:{}".format(json.dumps(result)), mac)
+    notes = hotspot_net[result['cell_srv']]
     if mac in resolved_macs or mac in resolved_devs:
         phones[mac]['state'] = '{}.Bat:{}%'.format(phones[mac]['state'], int(result['battery'], 16))
-    # print("Hotspot:{}".format(data))
+        phones[mac]['notes'] = notes
+    else:
+        phones[mac] = {'state': 'MagicSwitch', 'device': 'AppleWatch', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': notes}
+        resolved_macs.append(mac)
 
 
 def parse_wifi_j(mac, data):
@@ -624,18 +809,25 @@ def parse_wifi_j(mac, data):
     # |        | (0x08)|                        |                         |                       |                      |                      |
     # +--------+--------------------------------+-------------------------+-----------------------+----------------------+----------------------+
 
-    wifi_j = {'flags': 1, 'type': 1, 'tag': 3, 'appleID_hash': 3, 'phone_hash': 3, 'email_hash': 3, 'ssid_hash': 3}
+    wifi_j = {'flags': 1,
+              'type': 1,
+              'tag': 3,
+              'appleID_hash': 3,
+              'phone_hash': 3,
+              'email_hash': 3,
+              'ssid_hash': 3}
     result = parse_struct(data, wifi_j)
-    # print("WiFi join:{}".format(data))
-    # print(result)
-
+    put_verb_message("WiFi join:{}".format(json.dumps(result)), mac)
+    notes = f"phone:{result['phone_hash']}"
     global phone_number_info
     unkn = '<unknown>'
-    if mac not in victims:
+    if mac not in victims and result["type"] == "08":
         victims.append(mac)
         if args.check_hash:
-            if hash2phone_url: get_phone_web(result['phone_hash'])
-            else: get_phone_db(result['phone_hash'])
+            if hash2phone_url:
+                get_phone_web(result['phone_hash'])
+            else:
+                get_phone_db(result['phone_hash'])
             if args.check_phone:
                 get_names(True)
             if args.check_hlr:
@@ -653,12 +845,13 @@ def parse_wifi_j(mac, data):
         if resolved_macs.count(mac):
             phones[mac]['time'] = int(time.time())
             phones[mac]['phone'] = 'X'
+            phones[mac]['notes'] = notes
             hash2phone[mac] = {'ph_hash': result['phone_hash'], 'email_hash': result['email_hash'],
                                'appleID_hash': result['appleID_hash'], 'SSID_hash': result['ssid_hash'],
                                'phone_info': phone_number_info}
         else:
             phones[mac] = {'state': unkn, 'device': unkn, 'wifi': unkn, 'os': unkn, 'phone': '',
-                           'time': int(time.time())}
+                           'time': int(time.time()), 'notes': notes}
             resolved_macs.append(mac)
             phones[mac]['time'] = int(time.time())
             phones[mac]['phone'] = 'X'
@@ -670,29 +863,46 @@ def parse_wifi_j(mac, data):
 
 
 def parse_airpods(mac, data):
-    # 0                        3        4       5        6       7                 9                                                            25
-    # +------------------------+--------+-------+--------+-------+-----------------+------------------------------------------------------------+
-    # |                        |        |       |        |       |                 |                                                            |
-    # |     some               |state1  |state2 | data1  | data2 |     data3       |             data4                                          |
-    # |                        |        |       |        |       |                 |                                                            |
-    # +------------------------+--------+-------+--------+-------+-----------------+------------------------------------------------------------+
-    airpods = {'some': 3, 'state1': 1, 'state2': 1, 'data1': 1, 'data2': 1, 'data3': 2, 'data4': 16}
+    # 0       1                3        4       5       6       7       8       9                                 25
+    # +-------+----------------+--------+-------+-------+-------+-------+-------+---------------------------------+
+    # |       |      Device    |        |       |       | Lid   |  Dev  |       |                                 |
+    # |  0x01 |      model     |  UTP   | Bat1  | Bat2  | open  |  color|  0x00 |        encrypted payload        |
+    # |       |                |        |       |       | cntr  |       |       |                                 |
+    # +-------+----------------+--------+-------+-------+-------+-------+-------+---------------------------------+
+
+    airpods = {'fix1': 1,
+               'model': 2,
+               'utp': 1,
+               'battery1': 1,
+               'battery2': 1,
+               'lid_counter': 1,
+               'color': 1,
+               'fix2': 1,
+               'encr_data': 16}
     result = parse_struct(data, airpods)
-    # print("AirPods:{}".format(data))
-    # print(result)
+    put_verb_message("AirPods:{}".format(json.dumps(result)), mac)
     state = unkn = '<unknown>'
-    if result['state1'] in airpods_states.keys():
-        state = airpods_states[result['state1']]
+    bat1 = "{:08b}".format(int(result['battery1'], base=16))
+    bat2 = "{:08b}".format(int(result['battery2'], base=16))
+    bat_left = int(bat1[:4], 2) * 10
+    bat_right = int(bat1[4:], 2) * 10
+    color = '{}'.format(proximity_colors[result['color']])
+    bat_level = 'L:{}% R:{}%'.format(bat_left, bat_right)
+    notes = f'{bat_level} {color}'
+    if result['utp'] in airpods_states.keys():
+        state = airpods_states[result['utp']]
     else:
         state = unkn
-    if result['state2'] == '09':
+    if result['battery1'] == '09':
         state = 'Case:Closed'
     if mac in resolved_macs:
         phones[mac]['state'] = state
         phones[mac]['time'] = int(time.time())
+        phones[mac]['notes'] = notes
     else:
-        phones[mac] = {'state': state, 'device': 'AirPods', 'wifi': '<none>', 'os': '<none>', 'phone': '<none>',
-                       'time': int(time.time())}
+        phones[mac] = {'state': state, 'device': proximity_dev_models[result['model']], 'wifi': '', 'os': '',
+                       'phone': '',
+                       'time': int(time.time()), 'notes': notes}
         resolved_macs.append(mac)
 
 
@@ -703,23 +913,129 @@ def parse_airdrop_r(mac, data):
     # |           zeros                         |st(0x01)| sha(AppleID)   | sha(phone)          |  sha(email)       |   sha(email2)    |  zero  |
     # |                                         |        |                |                     |                   |                  |        |
     # +-----------------------------------------+--------+----------------+---------------------+-------------------+------------------+--------+
-    airdrop_r = {'zeros': 8, 'st': 1, 'appleID_hash': 2, 'phone_hash': 2, 'email_hash': 2, 'email2_hash': 2, 'zero': 1}
+    airdrop_r = {'zeros': 8,
+                 'st': 1,
+                 'appleID_hash': 2,
+                 'phone_hash': 2,
+                 'email_hash': 2,
+                 'email2_hash': 2,
+                 'zero': 1}
     result = parse_struct(data, airdrop_r)
-    # print("AirDrop:{}".format(data))
-    # print(result)
+    put_verb_message("AirDrop:{}".format(json.dumps(result)), mac)
+    notes = f"phone:{result['phone_hash']}"
+    if mac in resolved_macs:
+        phones[mac]['state'] = 'AirDrop'
+        phones[mac]['time'] = int(time.time())
+        phones[mac]['notes'] = notes
+    else:
+        phones[mac] = {'state': 'AirDrop', 'device': '', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': notes}
+        resolved_macs.append(mac)
+
+
+def parse_airprint(mac, data):
+    # 0       1       2       3           5                                         21       22
+    # +-------+-------+-------+-----------+-----------------------------------------+---------+
+    # |  Addr | Res   | Sec   |   QID or  |                                         |         |
+    # |  Type | path  | Type  |   TCP port|      IPv4 or IPv6 Address               | Power   |
+    # |       | type  |       |           |                                         |         |
+    # +-------+-------+-------+-----------+-----------------------------------------+---------+
+    airpirnt = {'addrType': 1,
+                'resPathType': 1,
+                'secType': 1,
+                'port': 2,
+                'IP': 16,
+                'power': 1}
+    result = parse_struct(data, airpirnt)
+    put_verb_message("AirPrint:{}".format(json.dumps(result)), mac)
+    if mac in resolved_macs:
+        phones[mac]['state'] = 'AirPrint'
+        phones[mac]['time'] = int(time.time())
+    else:
+        phones[mac] = {'state': 'AirPrint', 'device': '', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': ''}
+        resolved_macs.append(mac)
+
+
+def parse_airplay(mac, data):
+    # 0       1       2                6
+    # +-------+------------------------+
+    # |       | Config|                |
+    # | Flags | seed  |     IPv4       |
+    # |       |       |                |
+    # +-------+-------+----------------+
+    airplay = {'flags': 1,
+               'configSeeds': 1,
+               'ipV4': 4
+               }
+    result = parse_struct(data, airplay)
+    put_verb_message("AirPlay:{}".format(json.dumps(result)), mac)
+    if mac in resolved_macs:
+        phones[mac]['state'] = 'AirPlay'
+        phones[mac]['time'] = int(time.time())
+    else:
+        phones[mac] = {'state': 'AirPlay', 'device': '', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': ''}
+        resolved_macs.append(mac)
+
+
+def parse_homekit(mac, data):
+    # 0       1                7            9             11      12      13
+    # +------------------------+--------------------------+-------+-------+
+    # | Status|                |            |Global State | Conf  | Comp  |
+    # | flag  |  Device ID     | Categoty   |  number     | nmbr  | ver   |
+    # |       |                |            |             |       |       |
+    # +-------+----------------+------------+-------------+-------+-------+
+    homekit = {'statusFlag': 1,
+               'devID': 6,
+               'category': 2,
+               'globalStateNumber': 2,
+               'configurationNumber': 1,
+               'compatibleVersion': 1
+               }
+    result = parse_struct(data, homekit)
+    put_verb_message("Homekit:{}".format(json.dumps(result)), mac)
+    notes = homekit_category[result['category']]
+    if mac in resolved_macs:
+        phones[mac]['state'] = 'Homekit'
+        phones[mac]['time'] = int(time.time())
+        phones[mac]['notes'] = notes
+    else:
+        phones[mac] = {'state': 'Homekit', 'device': '', 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': notes}
+        resolved_macs.append(mac)
+
+
+def parse_siri(mac, data):
+    # 0            2        3        4            6        7
+    # +------------+--------+--------+------------+--------+
+    # |            |        |        |            | Random |
+    # |   hash     | SNR    | Confid |  Dev class | byte   |
+    # |            |        |        |            |        |
+    # +------------+--------+--------+------------+--------+
+    siri = {'hash': 2,
+            'SNR': 1,
+            'confidence': 1,
+            'devClass': 2,
+            'random': 1
+            }
+    result = parse_struct(data, siri)
+    put_verb_message("Siri:{}".format(json.dumps(result)), mac)
+    if mac in resolved_macs:
+        phones[mac]['state'] = 'Siri'
+        phones[mac]['time'] = int(time.time())
+        phones[mac]['device'] = siri_dev[result['devClass']]
+    else:
+        phones[mac] = {'state': 'Siri', 'device': siri_dev[result['devClass']], 'wifi': '', 'os': '', 'phone': '',
+                       'time': int(time.time()), 'notes': ''}
+        resolved_macs.append(mac)
 
 
 def read_packet(mac, data_str):
-    # state = '<unknown>'
-    # os_state = '<unknown>'
-    # wifi_state = '<unknown>'
-    # unkn = '<unknown>'
-
     if apple_company_id in data_str:
         header = data_str[:data_str.find(apple_company_id)]
         data = data_str[data_str.find(apple_company_id) + len(apple_company_id):]
         packet = parse_ble_packet(data)
-        # print(data)
         if ble_packets_types['nearby'] in packet.keys():
             parse_nearby(mac, header, packet[ble_packets_types['nearby']])
         if ble_packets_types['handoff'] in packet.keys():
@@ -736,6 +1052,15 @@ def read_packet(mac, data_str):
             parse_airpods(mac, packet[ble_packets_types['airpods']])
         if ble_packets_types['airdrop'] in packet.keys():
             parse_airdrop_r(mac, packet[ble_packets_types['airdrop']])
+        if ble_packets_types['airprint'] in packet.keys():
+            parse_airprint(mac, packet[ble_packets_types['airprint']])
+        if ble_packets_types['homekit'] in packet.keys():
+            parse_homekit(mac, packet[ble_packets_types['homekit']])
+        if ble_packets_types['siri'] in packet.keys():
+            parse_siri(mac, packet[ble_packets_types['siri']])
+        if ble_packets_types['airplay'] in packet.keys():
+            parse_siri(mac, packet[ble_packets_types['airplay']])
+
 
 def get_phone_db(hashp):
     global phone_number_info
@@ -743,12 +1068,13 @@ def get_phone_db(hashp):
     c = conn.cursor()
     c.execute('SELECT phone FROM map WHERE hash=?', (hashp,))
     phones = c.fetchall()
-    if not phones: print("No phone number found for hash '%s'" % hashp)
+    if not phones:
+        print("No phone number found for hash '%s'" % hashp)
     else:
-        phone_number_info = {str(i[0]): {'phone': str(i[0]), 'name': '', 'carrier': '', 'region': '', 'status': '', 'iMessage': ''}
-                             for i in phones}
+        phone_number_info = {
+        str(i[0]): {'phone': str(i[0]), 'name': '', 'carrier': '', 'region': '', 'status': '', 'iMessage': ''}
+        for i in phones}
     conn.close()
-
 
 
 def get_phone_web(hash):
@@ -796,6 +1122,13 @@ def print_results2(data):
 
 def print_wifi_devs():
     return print_results3(get_devices())
+
+
+def pop_verb_messages():
+    global verb_messages
+    result = '\n'.join(verb_messages)
+    verb_messages = []
+    return result
 
 
 def get_names(lat=False):
@@ -962,6 +1295,9 @@ if args.airdrop:
     thread3 = Thread(target=adv_airdrop, args=())
     thread3.daemon = True
     thread3.start()
+
+if args.verb:
+    logFile = '/tmp/apple_bleee_{}'.format(random.randint(1, 3000))
 
 init_bluez()
 thread1 = Thread(target=do_sniff, args=(False,))
