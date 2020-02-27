@@ -64,6 +64,7 @@ for num in range(phone_start, phone_stop + 1):
         print("\r%d%% completed" % int(100 - (phone_stop-num)/percentile), end="")
         c.executemany(sql_insert, phones_temp)
         phones_temp = list()
-conn.commit()
+c.executemany(sql_insert, phones_temp)
+print("\r100% completed")conn.commit()
 conn.close()
 print()
