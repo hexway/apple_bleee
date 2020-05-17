@@ -198,6 +198,10 @@ devices_models = {
     "iPhone11,4": "iPhone XS Max",
     "iPhone11,6": "iPhone XS Max Global",
     "iPhone11,8": "iPhone XR",
+    "iPhone12,1": "iPhone 11",
+    "iPhone12,3": "iPhone 11 Pro",
+    "iPhone12,5": "iPhone 11 Pro Max",
+    "iPhone12,8": "iPhone SE 2nd Gen",
     "MacBookPro15,1": "MacBook Pro 15, 2019",
     "MacBookPro15,2": "MacBook Pro 13, 2019",
     "MacBookPro15,1": "MacBook Pro 15, 2018",
@@ -312,6 +316,8 @@ devices_models = {
 
 proximity_dev_models = {
     '0220': 'AirPods',
+    '0f20': 'AirPods Gen 2',
+    '0e20': 'AirPods Pro',
     '0320': 'Powerbeats3',
     '0520': 'BeatsX',
     '0620': 'Beats Solo3'
@@ -367,6 +373,7 @@ siri_dev = {'0002': 'iPhone',
             '0003': 'iPad',
             '0009': 'MacBook',
             '000a': 'Watch',
+            '0228': 'Device 0228',
             }
 
 magic_sw_wrist = {
