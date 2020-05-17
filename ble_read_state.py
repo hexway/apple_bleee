@@ -202,6 +202,7 @@ devices_models = {
     "iPhone12,3": "iPhone 11 Pro",
     "iPhone12,5": "iPhone 11 Pro Max",
     "iPhone12,8": "iPhone SE 2nd Gen",
+    "MacBook10,1":"MacBook 12\", 2017",
     "MacBookPro15,1": "MacBook Pro 15, 2019",
     "MacBookPro15,2": "MacBook Pro 13, 2019",
     "MacBookPro15,1": "MacBook Pro 15, 2018",
