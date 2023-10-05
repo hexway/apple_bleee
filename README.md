@@ -24,7 +24,7 @@ git clone https://github.com/hexway/apple_bleee.git && cd ./apple_bleee
 sudo apt update && sudo apt install -y bluez libpcap-dev libev-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev cmake libbluetooth-dev
 sudo pip3 install -r requirements.txt
 # clone and install owl for AWDL interface
-git clone https://github.com/seemoo-lab/owl.git && cd ./owl && git submodule update --init && mkdir build && cd build && cmake .. && make && sudo make install && cd ../..
+git clone https://github.com/seemoo-lab/owl.git && cd ./owl && git submodule update --remote  --merge && mkdir build && cd build && cmake .. && make && sudo make install && cd ../..
 ```
 
 ## How to use
